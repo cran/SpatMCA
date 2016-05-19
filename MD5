@@ -1,0 +1,12 @@
+766315a78336d1617bd2caf1576490cf *DESCRIPTION
+0d53c98331fb08a6f1203c5833f8bdb7 *NAMESPACE
+7091dd6c6e5ed1b19d431dc2d7450f29 *R/RcppExports.R
+898cae73eb7e9f3ce675c4395cc47a04 *R/SpatMCA.R
+10ba20ed478595f26e82d1e7fdbe48b2 *man/SpatMCA-package.Rd
+7b6772580883a3802f4abd59543ed127 *man/SpatMCAinternal1.Rd
+deaa9ed49065d6370fb17dd844ed17f7 *man/SpatMCAinternal2.Rd
+3858ed95c4d119b32c39009d77b88f34 *man/spatmca.Rd
+3115ba38d49113def2b2baf8df7d44ca *src/Makevars
+5014cd330fbdb0cfecb43ac3121d62c7 *src/Makevars.win
+37d752a0a452a3f631f4115793b7fe3f *src/RcppExports.cpp
+66c7121ee58da058fb2dfc4456182977 *src/spatmca.cpp
