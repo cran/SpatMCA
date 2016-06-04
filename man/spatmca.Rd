@@ -24,13 +24,13 @@ center = TRUE, plot.cv = FALSE, maxit = 100, thr = 1e-04)
 
 \item{K.select}{If TRUE, K is selected automatically; otherwise, K.select is set to be user-supplied K. Default depends on user-supplied K.}
 
-\item{tau1u}{Optional user-supplied numeric vector of a nonnegative smoothness parameter sequence correponding to Y1. If NULL, 10 tau1 values in a range are used.}
+\item{tau1u}{Optional user-supplied numeric vector of a nonnegative smoothness parameter sequence correponding to Y1. If NULL, 10 tau1u values in a range are used.}
 
-\item{tau2u}{Optional user-supplied numeric vector of a nonnegative sparseness parameter sequence correponding to Y1. If NULL, \eqn{tau2u = 0}.}
+\item{tau2u}{Optional user-supplied numeric vector of a nonnegative sparseness parameter sequence correponding to Y1. If NULL, 10 tau2u values in a range are use.}
 
-\item{tau1v}{Optional user-supplied numeric vector of a nonnegative smoothness parameter sequence correponding to Y2. If NULL, 10 tau1 values in a range are used.}
+\item{tau1v}{Optional user-supplied numeric vector of a nonnegative smoothness parameter sequence correponding to Y2. If NULL, 10 tau1v values in a range are used.}
 
-\item{tau2v}{Optional user-supplied numeric vector of a nonnegative sparseness parameter sequence correponding to Y2. If NULL, \eqn{tau2v = 0}.}
+\item{tau2v}{Optional user-supplied numeric vector of a nonnegative sparseness parameter sequence correponding to Y2. If NULL, 10 tau2v values in a range are use.}
 
 \item{x1_new}{New location matrix correponding to Y1. If NULL, it is x1.}
 
@@ -76,14 +76,13 @@ Produce spatial coupled patterns at the designated locations according to the sp
 }
 \details{
 The optimization problem is
-\deqn{\max_{\bm{U}, \bm{V}} \frac{1}{n}\mbox{tr}(\bm{U}'\bm{Y}'_1\bm{Y}_2\bm{V}) - \tau_{1u}\mbox{tr}(\bm{U}'\bm{\Omega}_1\bm{U}) - \tau_{2u}\sum_{k=1}^K\sum_{j=1}^{p} |u_{jk}|- \tau_{1v}\mbox{tr}(\bm{V}'\bm{\Omega}_2\bm{V})-\tau_{2v}\sum_{k=1}^K\sum_{j=1}^{q} |\phi_{jk}|,}
+\deqn{\max_{\bm{U}, \bm{V}} \frac{1}{n}\mbox{tr}(\bm{U}'\bm{Y}'_1\bm{Y}_2\bm{V}) - \tau_{1u}\mbox{tr}(\bm{U}'\bm{\Omega}_1\bm{U}) - \tau_{2u}\sum_{k=1}^K\sum_{j=1}^{p} |u_{jk}|- \tau_{1v}\mbox{tr}(\bm{V}'\bm{\Omega}_2\bm{V})-\tau_{2v}\sum_{k=1}^K\sum_{j=1}^{q} |v_{jk}|,}
 \eqn{\mbox{subject to $ \bm{U}'\bm{U}=\bm{V}'\bm{V}=\bm{I}_K$,}} where \eqn{\bm{Y}_1} and \eqn{\bm{Y}_2} are two data matrices, \eqn{{\bm{\Omega}}_1} and \eqn{{\bm{\Omega}}_2} are two smoothness matrix, \eqn{\bm{V}=\{v_{jk}\}}, and \eqn{\bm{U}=\{u_{jk}\}}.
 }
 \examples{
-\dontrun{
 ############### 1D: regular locations ################################
 library(mvtnorm)
-p <- q <- 50
+p <- q <- 20
 n <- 100
 x1 <- matrix(seq(-7, 7, length = p), nrow = p, ncol = 1)
 x2 <- matrix(seq(-7, 7, length = q), nrow = q, ncol = 1)
@@ -98,11 +97,11 @@ noise <- rmvnorm(n, mean = rep(0, p + q), sigma= 0.001*diag(p + q))
 Y <- rmvnorm(n, mean = rep(0, p + q), sigma=Sigma) + noise
 Y1 <- Y[,1:p]
 Y2 <- Y[,-(1:p)]
-cv1 <- spatmca(x1, x2, Y1,Y2)
+cv1 <- spatmca(x1, x2, Y1, Y2)
 par(mfrow=c(2,1))
 plot(x1, cv1$Uestfn[,1], type='l', main="1st pattern for Y1")
-plot(x1, cv1$Vestfn[,1], type='l', main="2nd pattern for Y1")
-
+plot(x1, cv1$Vestfn[,1], type='l', main="1st pattern for Y2")
+\dontrun{
 ### 1D: artificial irregular locations
 rm_loc1 <- sample(1:p, 10)
 rm_loc2 <- sample(1:q, 10)
@@ -112,11 +111,10 @@ Y1_rm <- Y1[,-rm_loc1]
 Y2_rm <- Y2[,-rm_loc2]
 x1_new <- as.matrix(seq(-7, 7, length = 100))
 x2_new <- as.matrix(seq(-7, 7, length = 50))
-cv2 <- spatmca(x1 = x1_rm, x2 = x2_rm, Y1 = Y1_rm, Y2 = Y2_rm, tau2u = seq(0, 1,
-length = 20),tau2v = seq(0, 1, length = 20), x1_new = x1_new, x2_new = x2_new)
+cv2 <- spatmca(x1 = x1_rm, x2 = x2_rm, Y1 = Y1_rm, Y2 = Y2_rm, x1_new = x1_new, x2_new = x2_new)
 par(mfrow=c(2,1))
 plot(x1_new, cv2$Uestfn[,1], type='l', main="1st pattern for Y1")
-plot(x2_new, cv2$Vestfn[,1], type='l', main="2nd pattern for Y2")
+plot(x2_new, cv2$Vestfn[,1], type='l', main="1st pattern for Y2")
 
 ###############################2D real data#########################################
 # Daily 8-hour ozone averages and maximum temperature obtained from 28 monitoring 
@@ -134,7 +132,7 @@ rmna <- !colSums(is.na(oz))
 temp <- detrend(matrix(cMAXTMP[,rmna], nrow = nrow(cMAXTMP)), "linear")
 ozone <- detrend(matrix(oz[,rmna], nrow = nrow(oz)), "linear")
 x1 <- NYsite[rmna, 2:3]
-cv <- spatmca(x1, x1, temp, ozone, tau2u = seq(0, 1, length = 20), tau2v = seq(0, 1, length = 20))
+cv <- spatmca(x1, x1, temp, ozone)
 par(mfrow=c(2,1))
 quilt.plot(x1, cv$Uestfn[,1], xlab = "longitude", ylab = "latitude", 
 main = "1st spatial pattern for temperature")
@@ -155,17 +153,19 @@ mtext(paste("Pearson's correlation = ", round(corr,3)), 3)
 ###new locations
 new_p = 50
 x_lon <- seq(-80, -72, length = new_p)
-x_lat <- seq(40.5, 45, length = new_p)
+x_lat <- seq(41, 45, length = new_p)
 xx_new <- as.matrix(expand.grid(x = x_lon, y = x_lat))
 cv_new <- spatmca(x1,x1, temp, ozone, K = cv$Khat, tau1u = cv$stau1u, tau1v = 
 cv$stau1v, tau2u = cv$stau2u, tau2v = cv$stau2v, x1_new = xx_new, x2_new = xx_new)
 par(mfrow=c(2,1))
 quilt.plot(xx_new, cv_new$Uestfn[,1], nx = new_p, ny = new_p, xlab = "longitude", 
 ylab = "latitude", main = "1st spatial pattern for temperature")
-map(database="state",regions="new york", add=T)
+map(database="county", regions="new york", add = T)
+map.text("state", regions="new york", cex = 2, add = T)
 quilt.plot(xx_new, cv_new$Vestfn[,1], nx = new_p, ny = new_p,  xlab = "longitude",
 ylab = "latitude", main = "2nd spatial pattern for ozone")
-map(database="state",regions="new york", add=T)}
+map(database="county", regions="new york", add = T)
+map.text("state", regions="new york", cex = 2, add = T)}
 }
 \author{
 Wen-Ting Wang and Hsin-Cheng Huang
