@@ -1,8 +1,8 @@
 spatmca <- function(x1, x2, Y1, Y2, M = 5, K = NULL, K.select = ifelse(is.null(K),TRUE,FALSE), tau1u = NULL, tau2u = NULL,
-                    tau1v = NULL, tau2v = NULL, x1_new = NULL, x2_new = NULL, center = TRUE, plot.cv = FALSE, maxit = 100, thr = 1e-04){
+                    tau1v = NULL, tau2v = NULL, x1_new = NULL, x2_new = NULL, center = TRUE, plot.cv = FALSE, maxit = 100, thr = 1e-04, fullselect = FALSE){
   x1 = as.matrix(x1)
   x2 = as.matrix(x2)
- 
+  
   if(nrow(x1) != ncol(Y1))
     stop("The number of rows of x1 should be equal to the number of columns of Y1.")
   if (nrow(x1) < 3 ||nrow(x2) < 3)
@@ -13,7 +13,7 @@ spatmca <- function(x1, x2, Y1, Y2, M = 5, K = NULL, K.select = ifelse(is.null(K
     stop("The numbers of sample sizes of both data should be equal.")
   if(M >= max(nrow(Y1)))
     stop("Number of folds must be less than sample size.")
- 
+  
   if(center == TRUE){
     Y1 = Y1 - apply(Y1 , 2, "mean")
     Y2 = Y2 - apply(Y2 , 2, "mean")
@@ -32,13 +32,14 @@ spatmca <- function(x1, x2, Y1, Y2, M = 5, K = NULL, K.select = ifelse(is.null(K
   if(is.null(tau2u)&&is.null(tau2v)){
     ntau2u <- ntau2v <- 11
     
-    indexu <- sort(abs(tempegvl3$u[,1]),decreasing=T,index.return=T)$ix
+    indexu <- sort(abs(tempegvl3$u[,1]), decreasing=T, index.return=T)$ix
     nu1u <- indexu[2]
     nu2u <- indexu[ncol(Y1)]
     max.tau2u <- 2*abs(dd[nu1u,]%*%tempegvl3$v[,1])
     min.tau2u <- abs(dd[nu2u,]%*%tempegvl3$v[,1])
-    tau2u <- c(0,exp(seq(log(min.tau2u), log(max.tau2u), length = (ntau2u-1)))) 
   
+    tau2u <- c(0,exp(seq(log(min.tau2u), log(max.tau2u), length = (ntau2u-1)))) 
+    
     indexv <- sort(abs(tempegvl3$v[,1]),decreasing=T,index.return=T)$ix
     nu1v <- indexv[2]
     nu2v <- indexv[ncol(Y2)]
@@ -91,7 +92,7 @@ spatmca <- function(x1, x2, Y1, Y2, M = 5, K = NULL, K.select = ifelse(is.null(K
     ntau1u <- length(tau1u)
     ntau1v <- length(tau1v)
   }
-    
+  
   if(M < 2 && (max(ntau1u, ntau2u, ntau1v,ntau2v) > 1)) {
     ntau1u <- 1
     ntau2u <- 1
@@ -99,7 +100,7 @@ spatmca <- function(x1, x2, Y1, Y2, M = 5, K = NULL, K.select = ifelse(is.null(K
     ntau2v <- 1
     warning("Only produce the result based on the largest tau1 and largest tau2.")
   }  
-    
+  
   if(ntau2u == 1 && tau2u > 0){
     if(tau2u !=0)
       l2u <- c(0,exp(seq(log(tau2u/1e3), log(tau2u), length = 10)))
@@ -118,9 +119,20 @@ spatmca <- function(x1, x2, Y1, Y2, M = 5, K = NULL, K.select = ifelse(is.null(K
     l2v <- 1
   }
   if(K.select == TRUE){
-    cvtempold <- spatmcacv_rcpp(x1, x2, Y1, Y2, M, 1, tau1u, tau2u, tau1v, tau2v,  stra, maxit, thr, l2u, l2v)
+    if(fullselect == FALSE)
+      cvtempold <- spatmcacv_rcpp(x1, x2, Y1, Y2, M, 1, tau1u, tau2u, tau1v, tau2v,  stra, maxit, thr, l2u, l2v)
+    else{
+      warning("Computing time may be quite long")
+      cvtempold <- spatmcacvall_rcpp(x1, x2, Y1, Y2, M, 1, tau1u, tau2u, tau1v, tau2v,  stra, maxit, thr, l2u, l2v)
+    }
     for(k in 2:min(dim(Y1),dim(Y2))){
-      cvtemp <- spatmcacv_rcpp(x1, x2, Y1, Y2, M, k, tau1u, tau2u, tau1v, tau2v,  stra, maxit, thr, l2u, l2v)
+      if(fullselect == FALSE)
+        cvtemp <- spatmcacv_rcpp(x1, x2, Y1, Y2, M, k, tau1u, tau2u, tau1v, tau2v,  stra, maxit, thr, l2u, l2v)
+      else{
+        warning("Computing time may be quite long")
+        cvtemp <- spatmcacvall_rcpp(x1, x2, Y1, Y2, M, k, tau1u, tau2u, tau1v, tau2v,  stra, maxit, thr, l2u, l2v)
+      }
+        
       if(min(cvtempold$cv2)<= min(cvtemp$cv2)||abs(min(cvtempold$cv2) - min(cvtemp$cv2))<=1e-8)
         break
       cvtempold <- cvtemp
@@ -128,7 +140,12 @@ spatmca <- function(x1, x2, Y1, Y2, M = 5, K = NULL, K.select = ifelse(is.null(K
     Khat <- k-1
   }
   else{
-    cvtempold <- spatmcacv_rcpp(x1, x2, Y1, Y2, M, K, tau1u, tau2u, tau1v, tau2v,  stra, maxit, thr, l2u, l2v)
+    if(fullselect == FALSE)
+      cvtempold <- spatmcacv_rcpp(x1, x2, Y1, Y2, M, K, tau1u, tau2u, tau1v, tau2v,  stra, maxit, thr, l2u, l2v)
+    else{
+      warning("Computing time may be quite long")
+      cvtempold <- spatmcacvall_rcpp(x1, x2, Y1, Y2, M, K, tau1u, tau2u, tau1v, tau2v,  stra, maxit, thr, l2u, l2v)
+    }
     Khat <- K
   }  
   
@@ -138,6 +155,7 @@ spatmca <- function(x1, x2, Y1, Y2, M = 5, K = NULL, K.select = ifelse(is.null(K
   cvtau2v <- cvtempold$cvtau2v
   cv1 <- cvtempold$cv1
   cv2 <- cvtempold$cv2
+  cvall <- cvtempold$cvall
   Uest <- cvtempold$Uest
   Vest <- cvtempold$Vest
   if(is.null(x1_new)){
@@ -163,7 +181,7 @@ spatmca <- function(x1, x2, Y1, Y2, M = 5, K = NULL, K.select = ifelse(is.null(K
   }
   Dest <- as.vector(cvtempold$Dest)
   crosscovfn <- Uestfn%*%diag(Dest, nrow = Khat, ncol = Khat)%*%t(Vestfn)
-  obj.cv <- list(Uestfn = Uestfn, Vestfn = Vestfn, crosscov = crosscovfn, cv1 = cv1, cv2 = cv2, Khat = Khat,
+  obj.cv <- list(Uestfn = Uestfn, Vestfn = Vestfn, crosscov = crosscovfn, Dest = Dest, cv1 = cv1, cv2 = cv2, cvall = cvall, Khat = Khat,
                  stau1u = cvtau1u, stau2u = cvtau2u,stau1v = cvtau1v, stau2v = cvtau2v,
                  tau1u = tau1u, tau2u = tau2u, tau1v = tau1v, tau2v = tau2v)
   return(obj.cv)

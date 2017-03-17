@@ -6,7 +6,7 @@
 \usage{
 spatmca(x1, x2, Y1, Y2, M = 5, K = NULL, K.select = ifelse(is.null(K),TRUE,FALSE),
 tau1u = NULL, tau2u = NULL, tau1v = NULL, tau2v = NULL, x1_new = NULL, x2_new = NULL,
-center = TRUE, plot.cv = FALSE, maxit = 100, thr = 1e-04)
+center = TRUE, plot.cv = FALSE, maxit = 100, thr = 1e-04, fullselect  = FALSE)
 }
 
 \arguments{
@@ -43,11 +43,15 @@ center = TRUE, plot.cv = FALSE, maxit = 100, thr = 1e-04)
 \item{maxit}{Maximum number of iterations. Default value is 100.}
 
 \item{thr}{Threshold for convergence. Default value is \eqn{10^{-4}}.}
-}
+
+\item{fullselect}{If TRUE, The K-fold CV performs to select 4 tuning parameters simultaneously. Default value is FALSE.}}
+
 \value{
 \item{Uestfn}{Estimated patterns for Y1 at the new locations, x1_new.}
 
 \item{Vestfn}{Estimated patterns for Y2 at the new locations, x2_new.}
+
+\item{Dest}{Estimated singular values.}
 
 \item{crosscov}{Estimated cross-covariance matrix between Y1 and Y2.}
 
@@ -59,9 +63,11 @@ center = TRUE, plot.cv = FALSE, maxit = 100, thr = 1e-04)
 
 \item{stau2v}{Selected tau2v.}
 
-\item{cv1}{cv socres for tau1u and tau1v.}
+\item{cv1}{cv socres for tau1u and tau1v when fullselect is FALSE.}
 
-\item{cv2}{cv socres for tau2u and tau2v.}
+\item{cv2}{cv socres for tau2u and tau2v when fullselect is FALSE.}
+
+\item{cvall}{cv socres for tau1u, tau2u, tau1v and tau2v when fullselect is TRUE.}
 
 \item{tau1u}{Sequence of tau1u-values used in the process.}
 
@@ -81,7 +87,6 @@ The optimization problem is
 }
 \examples{
 ############### 1D: regular locations ################################
-library(mvtnorm)
 p <- q <- 20
 n <- 100
 x1 <- matrix(seq(-7, 7, length = p), nrow = p, ncol = 1)
@@ -93,8 +98,8 @@ Sigma[1:p, 1:p] <- diag(p)
 Sigma[(p + 1):(p + q), (p + 1):(p + q)] <- diag(p)
 Sigma[1:p, (p + 1):(p + q)] <- u\%*\%t(v)
 Sigma[(p + 1):(p + q), 1:p] <- t(Sigma[1:p, (p + 1):(p + q)])
-noise <- rmvnorm(n, mean = rep(0, p + q), sigma= 0.001*diag(p + q))
-Y <- rmvnorm(n, mean = rep(0, p + q), sigma=Sigma) + noise
+noise <- MASS::mvrnorm(n, mu = rep(0, p + q), Sigma= 0.001*diag(p + q))
+Y <- MASS:::mvrnorm(n, mu = rep(0, p + q), Sigma=Sigma) + noise
 Y1 <- Y[,1:p]
 Y2 <- Y[,-(1:p)]
 cv1 <- spatmca(x1, x2, Y1, Y2)
@@ -171,5 +176,5 @@ map.text("state", regions="new york", cex = 2, add = T)}
 Wen-Ting Wang and Hsin-Cheng Huang
 }
 \references{
-Wang, W.-T. and Huang, H.-C. (2016). Regularized spatial maximum covariance analysis, to submit.
+Wang, W.-T. and Huang, H.-C. (2017). Regularized spatial maximum covariance analysis, to submit.
 }
