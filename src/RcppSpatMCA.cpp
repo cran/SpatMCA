@@ -13,15 +13,15 @@ using namespace arma;
 
 arma::mat cubicmatrix(const vec z1){
   
-  //vec h = diff(z1);
   vec h(z1.n_elem-1);
-  for(unsigned i = 0; i < z1.n_elem-1; i++)
-    h[i] = z1[i+1]-z1[i];
   arma::mat Q, R;
   int p = z1.n_elem;
   Q.zeros(p-2,p);
   R.zeros(p-2,p-2);
   
+  for(unsigned i = 0; i < z1.n_elem-1; i++)
+    h[i] = z1[i+1]-z1[i];
+
   for(unsigned j = 0; j < p-2; ++j){
     Q(j,j) = 1/h[j];
     Q(j,j+1) = -1/h[j]-1/h[j+1];
@@ -46,7 +46,7 @@ struct tpm: public RcppParallel::Worker {
   tpm(const mat &P, mat& L, int p, int d) : P(P), L(L), p(p), d(d){}
   void operator()(std::size_t begin, std::size_t end) {
     for(std::size_t i = begin; i < end; i++){
-      for(unsigned j = 0; j < p; ++j){
+      for(unsigned j = 0; j < p; j++){
         if(j > i){
           if(d == 2){  
             double r  = sqrt(pow(P(i, 0)-P(j, 0), 2)+(pow(P(i, 1)-P(j, 1), 2)));
@@ -62,7 +62,6 @@ struct tpm: public RcppParallel::Worker {
                             pow(P(i, 2) - P(j, 2), 2));
             L(i, j) = -r/(8.0*arma::datum::pi);
           }
-          
         }
       }  
       
@@ -92,6 +91,14 @@ arma::mat tpmatrix(const arma::mat P){
   return(result);
 }
 
+
+//' Internal function: thin-plane spline matrix
+//' @keywords internal
+//' @param z A new location matrix
+//' @param P A location matrix
+//' @param Phi An eigenvector matrix
+//' @return A thin-plane spline matrix
+//'
 // [[Rcpp::export]]
 arma::mat tpm2(const arma::mat z,const arma::mat P, const arma::mat Phi){
   arma::mat L;//, Lp;
@@ -100,7 +107,6 @@ arma::mat tpm2(const arma::mat z,const arma::mat P, const arma::mat Phi){
   tpm tpm(P,L,p,d);
   parallelFor(0, p,tpm);
   L = L + L.t();
-  // Lp = inv(L);  
   arma::mat Phi_star, para(p+d+1, K);
   Phi_star.zeros(p+d+1, K);
   Phi_star.rows(0,p-1) = Phi;
@@ -152,7 +158,6 @@ void spatmca_tau1(mat& G, mat& C, mat& Lambda2, const mat matrixinv, const int p
   arma::mat temp, U1, U2, V1, V2, R = G, Cold = C,  Lambda2old = Lambda2;
   arma::vec er(2), S1, S2;
   
-  
   for (unsigned iter = 0; iter < maxit; iter++){ 
     G = matrixinv*(zeta*(R+Cold)-Lambda2old);
     R = G;
@@ -171,7 +176,6 @@ void spatmca_tau1(mat& G, mat& C, mat& Lambda2, const mat matrixinv, const int p
       break;
     Cold = C;
     Lambda2old = Lambda2;
-    
   }
 }
 
@@ -286,13 +290,13 @@ struct spatmcacv_p: public RcppParallel::Worker {
           if(j == 0 && i ==0){
             output(i,j,k) = norm((S12valid.slice(k)-G.rows(0,p1-1)*diagmat(max(zero,svdtemp.subvec(0,K-1)))*G.rows(p1,p1+p2-1).t()),"fro");
           }
-          else{//if(j !=0 && i != 0){ 
+          else{
             matrixinv =  0.5*arma::inv_sympd(zetatemp[k]*Ip-Theta);
             spatmca_tau1(G, C, Gamma2, matrixinv, p1, p2, zetatemp[k], maxit,tol);
             D = max(zero, diagvec(G.rows(0,p1-1).t()*S12train.slice(k)*G.rows(p1,p1+p2-1)));
             output(i,j,k) = norm((S12valid.slice(k)-G.rows(0,p1-1)*diagmat(D)*G.rows(p1,p1+p2-1).t()),"fro");
           }
-          if(j==0){            
+          if(j == 0){            
             Gold = G;
             Cold = C;
             Gamma2old = Gamma2;
@@ -303,7 +307,6 @@ struct spatmcacv_p: public RcppParallel::Worker {
   }
   
 };
-
 
 using namespace arma; 
 using namespace Rcpp;
@@ -472,10 +475,29 @@ struct spatmcacv_p2: public RcppParallel::Worker {
 };
 
 
-
 using namespace Rcpp;
 using namespace arma;
 using namespace std;
+
+
+//' Internal function: M-fold Cross-validation of SpatMCA
+//' @keywords internal
+//' @param sxr A location matrix for a variable X
+//' @param sxr A location matrix for a variable Y
+//' @param Yr A data matrix of Y
+//' @param Yr A data matrix of X
+//' @param M A number of folds
+//' @param K The number of estimated eigenfunctions
+//' @param tau1ur A range of tau1u
+//' @param tau2ur A range of tau2u
+//' @param tau1vr A range of tau1v
+//' @param tau2vr A range of tau2v
+//' @param nkr A vector of fold numbers
+//' @param maxit A maximum number of iteration
+//' @param tol A tolerance rate
+//' @param l2ur A given tau2u
+//' @param l2vr A given tau2v
+//' @return A list of selected parameters
 // [[Rcpp::export]]
 List spatmcacv_rcpp(NumericMatrix  sxr, NumericMatrix  syr, NumericMatrix Xr, NumericMatrix Yr, int M, int K, 
                     NumericVector  tau1ur, NumericVector  tau2ur, NumericVector  tau1vr, NumericVector  tau2vr,  NumericVector  nkr, int maxit, double tol, NumericVector  l2ur,NumericVector  l2vr) {
@@ -594,12 +616,7 @@ List spatmcacv_rcpp(NumericMatrix  sxr, NumericMatrix  syr, NumericMatrix Xr, Nu
       spatmca_tau1(Gest, Cest, Gamma2est, matrixinv, p, q, zeta, maxit, tol);  
     }
     if(cvtau1u == 0 && cvtau1v ==0){
-      //   arma::mat A = diagmat(1/(pow(zeta,2)-pow(SPhiest.subvec(0,K-1),2)));
-      //    matrixinv.submat(0,0,p-1,p-1) = 2*zeta*Gest.rows(0,p-1)*A*Gest.rows(0,p-1).t();
-      //    matrixinv.submat(0,p,p-1,p+q-1) = Gest.rows(0,p-1)*diagmat(SPhiest.subvec(0,K-1))*A*Gest.rows(p,p+q-1).t();
-      //    matrixinv.submat(p,0,p+q-1,p-1) = matrixinv.submat(0,p,p-1,p+q-1).t();
-      //    matrixinv.submat(p,p,p+q-1,p+q-1) = 2*zeta*Gest.rows(p,p+q-1)*A*Gest.rows(p,p+q-1).t();;
-      matrixinv=0.5*arma::inv_sympd(zeta*Ip-Thetaest);
+       matrixinv=0.5*arma::inv_sympd(zeta*Ip-Thetaest);
     }
     else if(cvtau1v !=0){
       if(cvtau1u == 0){
@@ -779,13 +796,28 @@ struct spatmcacv_pall: public RcppParallel::Worker {
   }
 };
 
-
-
-
-
 using namespace Rcpp;
 using namespace arma;
 using namespace std;
+
+//' Internal function: Overall M-fold Cross-validation of SpatMCA
+//' @keywords internal
+//' @param sxr A location matrix for a variable X
+//' @param sxr A location matrix for a variable Y
+//' @param Yr A data matrix of Y
+//' @param Yr A data matrix of X
+//' @param M A number of folds
+//' @param K The number of estimated eigenfunctions
+//' @param tau1ur A range of tau1u
+//' @param tau2ur A range of tau2u
+//' @param tau1vr A range of tau1v
+//' @param tau2vr A range of tau2v
+//' @param nkr A vector of fold numbers
+//' @param maxit A maximum number of iteration
+//' @param tol A tolerance rate
+//' @param l2ur A given tau2u
+//' @param l2vr A given tau2v
+//' @return A list of selected parameters
 // [[Rcpp::export]]
 List spatmcacvall_rcpp(NumericMatrix  sxr, NumericMatrix  syr, NumericMatrix Xr, NumericMatrix Yr, int M, int K, 
                        NumericVector  tau1ur, NumericVector  tau2ur, NumericVector  tau1vr, NumericVector  tau2vr,  NumericVector  nkr, int maxit, double tol, NumericVector  l2ur,NumericVector  l2vr) {
