@@ -2,25 +2,24 @@
 #'
 #' @description Produce spatial coupled patterns at the designated locations according to the specified tuning parameters or the tuning parameters selected by M-fold cross-validation.
 #'
-#' @param x1 Location matrix (\eqn{p \times d}) correponding to Y1. Each row is a location. \eqn{d=1,2} is the dimension of locations.
-#' @param x2 Location matrix (\eqn{q \times d}) correponding to Y2. Each row is a location.
+#' @param x1 Location matrix (\eqn{p \times d}) corresponding to Y1. Each row is a location. \eqn{d=1,2} is the dimension of locations.
+#' @param x2 Location matrix (\eqn{q \times d}) corresponding to Y2. Each row is a location.
 #' @param Y1 Data matrix (\eqn{n \times p}) of the first variable stores the values at \eqn{p} locations with sample size \eqn{n}.
 #' @param Y2 Data matrix (\eqn{n \times q}) of the second variable stores the values at \eqn{q} locations with sample size \eqn{n}.
 #' @param M Optional number of folds; default is 5.
-#' @param K Optional user-supplied number of coupled patterns; default is NULL. If K is NULL or doesSelectRank is TRUE, K is selected automatically.
-#' @param doesSelectRank If TRUE, K is selected automatically; otherwise, doesSelectRank is set to be user-supplied K. Default depends on user-supplied K.
-#' @param tau1u Optional user-supplied numeric vector of a nonnegative smoothness parameter sequence correponding to Y1. If NULL, 10 tau1u values in a range are used.
-#' @param tau2u Optional user-supplied numeric vector of a nonnegative smoothness parameter sequence correponding to Y1. If NULL, 10 tau2u values in a range are used.
-#' @param tau1v Optional user-supplied numeric vector of a nonnegative smoothness parameter sequence correponding to Y2. If NULL, 10 tau1v values in a range are used.
-#' @param tau2v Optional user-supplied numeric vector of a nonnegative smoothness parameter sequence correponding to Y2. If NULL, 10 tau2v values in a range are used.
-#' @param x1New New location matrix correponding to Y1. If NULL, it is x1.
-#' @param x2New New location matrix correponding to Y2. If NULL, it is x2.
+#' @param K Optional user-supplied number of coupled patterns; default is NULL. If K is NULL or is_K_selected is TRUE, K is selected automatically.
+#' @param is_K_selected If TRUE, K is selected automatically; otherwise, is_K_selected is set to be user-supplied K. Default depends on user-supplied K.
+#' @param tau1u Optional user-supplied numeric vector of a nonnegative smoothness parameter sequence corresponding to Y1. If NULL, 10 tau1u values in a range are used.
+#' @param tau2u Optional user-supplied numeric vector of a nonnegative smoothness parameter sequence corresponding to Y1. If NULL, 10 tau2u values in a range are used.
+#' @param tau1v Optional user-supplied numeric vector of a nonnegative smoothness parameter sequence corresponding to Y2. If NULL, 10 tau1v values in a range are used.
+#' @param tau2v Optional user-supplied numeric vector of a nonnegative smoothness parameter sequence corresponding to Y2. If NULL, 10 tau2v values in a range are used.
+#' @param x1New New location matrix corresponding to Y1. If NULL, it is x1.
+#' @param x2New New location matrix corresponding to Y2. If NULL, it is x2.
 #' @param center If TRUE, center the columns of Y. Default is FALSE.
-#' @param plot.cv If TRUE, plot the cv values. Default is FALSE.
 #' @param maxit Maximum number of iterations. Default value is 100.
 #' @param thr Threshold for convergence. Default value is \eqn{10^{-4}}.
-#' @param doesSelectAllTuningParameters If TRUE, The K-fold CV performs to select 4 tuning parameters simultaneously. Default value is FALSE.
-#' @param numCores Number of cores used to parallel computing. Default value is NULL (See `RcppParallel::defaultNumThreads()`)
+#' @param are_all_tuning_parameters_selected If TRUE, the K-fold CV performs to select 4 tuning parameters simultaneously. Default value is FALSE.
+#' @param num_cores Number of cores used to parallel computing. Default value is NULL (See `RcppParallel::defaultNumThreads()`)
 #'
 #' @return A list of objects including
 #' \item{Uestfn}{Estimated patterns for Y1 at the new locations, x1New.}
@@ -31,9 +30,9 @@
 #' \item{stau2u}{Selected tau2u.}
 #' \item{stau1v}{Selected tau1v.}
 #' \item{stau2v}{Selected tau2v.}
-#' \item{cv1}{cv socres for tau1u and tau1v when doesSelectAllTuningParameters is FALSE.}
-#' \item{cv2}{cv socres for tau2u and tau2v when doesSelectAllTuningParameters is FALSE.}
-#' \item{cvall}{cv socres for tau1u, tau2u, tau1v and tau2v when doesSelectAllTuningParameters is TRUE.}
+#' \item{cv1}{cv scores for tau1u and tau1v when are_all_tuning_parameters_selected is FALSE.}
+#' \item{cv2}{cv scores for tau2u and tau2v when are_all_tuning_parameters_selected is FALSE.}
+#' \item{cvall}{cv scores for tau1u, tau2u, tau1v and tau2v when are_all_tuning_parameters_selected is TRUE.}
 #' \item{tau1u}{Sequence of tau1u-values used in the process.}
 #' \item{tau2u}{Sequence of tau2u-values used in the process.}
 #' \item{tau1v}{Sequence of tau1v-values used in the process.}
@@ -64,14 +63,14 @@
 #' Y <- MASS::mvrnorm(n, mu = rep(0, p + q), Sigma = Sigma) + noise
 #' Y1 <- Y[, 1:p]
 #' Y2 <- Y[, -(1:p)]
-#' cv1 <- spatmca(x1, x2, Y1, Y2, numCores = 2)
+#' cv1 <- spatmca(x1, x2, Y1, Y2, num_cores = 2)
 #'
 #' par(mfrow = c(2, 1))
 #' plot(x1, cv1$Uestfn[, 1], type='l', main = "1st pattern for Y1")
 #' plot(x1, cv1$Vestfn[, 1], type='l', main = "1st pattern for Y2")
 #' ## Avoid changing the global enviroment
 #' par(originalPar)
-#' 
+#'
 #' \donttest{
 #' # The following examples will be executed more than 5 secs or including other libraries.
 #' ## 1D: artificial irregular locations
@@ -213,7 +212,7 @@ spatmca <- function(x1,
                     Y2,
                     M = 5,
                     K = NULL,
-                    doesSelectRank = ifelse(is.null(K), TRUE, FALSE),
+                    is_K_selected = ifelse(is.null(K), TRUE, FALSE),
                     tau1u = NULL,
                     tau2u = NULL,
                     tau1v = NULL,
@@ -221,32 +220,21 @@ spatmca <- function(x1,
                     x1New = NULL,
                     x2New = NULL,
                     center = TRUE,
-                    plot.cv = FALSE,
                     maxit = 100,
                     thr = 1e-04,
-                    doesSelectAllTuningParameters = FALSE,
-                    numCores = NULL) {
-  set_cores(numCores)
+                    are_all_tuning_parameters_selected = FALSE,
+                    num_cores = NULL) {
+  call <- match.call()
+  setCores(num_cores)
   
   x1 <- as.matrix(x1)
   x2 <- as.matrix(x2)
+  checkInputData(x1, x2, Y1, Y2, M)
   
-  if (nrow(x1) != ncol(Y1))
-    stop("The number of rows of x1 should be equal to the number of columns of Y1.")
-  if (nrow(x1) < 3 || nrow(x2) < 3)
-    stop("Number of locations must be larger than 2.")
-  if (ncol(x1) > 3 || ncol(x2) > 3)
-    stop("Dimension of locations must be less 4.")
-  if (nrow(Y1) != nrow(Y2))
-    stop("The numbers of sample sizes of both data should be equal.")
-  if (M >= max(nrow(Y1)))
-    stop("Number of folds must be less than sample size.")
+  Y1 <- detrend(Y1, is_K_selected)
+  Y2 <- detrend(Y2, is_K_selected)
   
-  if (center == TRUE) {
-    Y1 <- Y1 - apply(Y1 , 2, "mean")
-    Y2 <- Y2 - apply(Y2 , 2, "mean")
-  }
-  n = nrow(Y1)
+  n <- nrow(Y1)
   stra <- sample(rep(1:M, length.out = nrow(Y1)))
   
   tempegvl1 <- svd(Y1 / n)
@@ -259,19 +247,19 @@ spatmca <- function(x1,
   
   if (is.null(tau2u) && is.null(tau2v)) {
     ntau2u <- ntau2v <- 11
-    
     indexu <-
       sort(abs(tempegvl3$u[, 1]),
            decreasing = TRUE,
            index.return = TRUE)$ix
     nu1u <- indexu[2]
     nu2u <- indexu[ncol(Y1)]
-    max.tau2u <- 2 * abs(dd[nu1u,] %*% tempegvl3$v[, 1])[1]
-    min.tau2u <- abs(dd[nu2u,] %*% tempegvl3$v[, 1])[1]
+    max.tau2u <- 2 * abs(dd[nu1u, ] %*% tempegvl3$v[, 1])[1]
+    min.tau2u <- abs(dd[nu2u, ] %*% tempegvl3$v[, 1])[1]
     
     tau2u <-
       c(0, exp(seq(
-        log(min.tau2u), log(max.tau2u), length = (ntau2u - 1)
+        log(min.tau2u), log(max.tau2u),
+        length = (ntau2u - 1)
       )))
     
     indexv <-
@@ -280,13 +268,13 @@ spatmca <- function(x1,
            index.return = TRUE)$ix
     nu1v <- indexv[2]
     nu2v <- indexv[ncol(Y2)]
-    max.tau2v <- 2 * abs(t(dd)[nu1v,] %*% tempegvl3$u[, 1])[1]
-    min.tau2v <- abs(t(dd)[nu2v,] %*% tempegvl3$u[, 1])[1]
+    max.tau2v <- 2 * abs(t(dd)[nu1v, ] %*% tempegvl3$u[, 1])[1]
+    min.tau2v <- abs(t(dd)[nu2v, ] %*% tempegvl3$u[, 1])[1]
     tau2v <-
       c(0, exp(seq(
-        log(min.tau2v), log(max.tau2v), length = (ntau2v - 1)
+        log(min.tau2v), log(max.tau2v),
+        length = (ntau2v - 1)
       )))
-    
   } else if (is.null(tau2u)) {
     ntau2u <- 11
     indexu <-
@@ -295,11 +283,12 @@ spatmca <- function(x1,
            index.return = TRUE)$ix
     nu1u <- indexu[2]
     nu2u <- indexu[ncol(Y1)]
-    max.tau2u <- 2 * abs(dd[nu1u,] %*% tempegvl3$v[, 1])[1]
-    min.tau2u <- abs(dd[nu2u,] %*% tempegvl3$v[, 1])[1]
+    max.tau2u <- 2 * abs(dd[nu1u, ] %*% tempegvl3$v[, 1])[1]
+    min.tau2u <- abs(dd[nu2u, ] %*% tempegvl3$v[, 1])[1]
     tau2u <-
       c(0, exp(seq(
-        log(min.tau2u), log(max.tau2u), length = (ntau2u - 1)
+        log(min.tau2u), log(max.tau2u),
+        length = (ntau2u - 1)
       )))
     
     ntau2v <- length(tau2v)
@@ -312,16 +301,17 @@ spatmca <- function(x1,
     nu1v <- indexv[2]
     nu2v <- indexv[ncol(Y2)]
     max.tau2v <-
-      egvl3 * abs(t(dd)[nu1v,] %*% tempegvl3$u[, 1])[1]
+      egvl3 * abs(t(dd)[nu1v, ] %*% tempegvl3$u[, 1])[1]
     min.tau2v <-
-      egvl3 * abs(t(dd)[nu2v,] %*% tempegvl3$u[, 1])[1]
+      egvl3 * abs(t(dd)[nu2v, ] %*% tempegvl3$u[, 1])[1]
     tau2v <-
       c(0, exp(seq(
-        log(min.tau2v), log(max.tau2v), length = (ntau2v - 1)
+        log(min.tau2v), log(max.tau2v),
+        length = (ntau2v - 1)
       )))
     
     ntau2u <- length(tau2u)
-  } else{
+  } else {
     ntau2u <- length(tau2u)
     ntau2v <- length(tau2v)
   }
@@ -334,21 +324,33 @@ spatmca <- function(x1,
     max.tau1v <- egvl3 / egvl2 * sqrt(ncol(Y2) / nrow(Y2))[1]
     tau1u <-
       c(0, exp(seq(
-        log(max.tau1u / 1e3), log(max.tau1u), length = (ntau1u - 1)
+        log(max.tau1u / 1e3), log(max.tau1u),
+        length = (ntau1u - 1)
       )))
     tau1v <-
       c(0, exp(seq(
-        log(max.tau1v / 1e3), log(max.tau1v), length = (ntau1v - 1)
+        log(max.tau1v / 1e3), log(max.tau1v),
+        length = (ntau1v - 1)
       )))
   } else if (is.null(tau1u)) {
     ntau1u <- 11
     max.tau1u <- egvl3 / egvl1 * sqrt(ncol(Y1) / nrow(Y1))[1]
     ntau1v <- length(tau1v)
+    tau1u <-
+      c(0, exp(seq(
+        log(max.tau1u / 1e3), log(max.tau1u),
+        length = (ntau1u - 1)
+      )))
   } else if (is.null(tau1v)) {
     ntau1v <- 11
     max.tau1v <- egvl3 / egvl2 * sqrt(ncol(Y2) / nrow(Y2))[1]
     ntau1u <- length(tau1u)
-  } else{
+    tau1v <-
+      c(0, exp(seq(
+        log(max.tau1v / 1e3), log(max.tau1v),
+        length = (ntau1v - 1)
+      )))
+  } else {
     ntau1u <- length(tau1u)
     ntau1v <- length(tau1v)
   }
@@ -361,27 +363,32 @@ spatmca <- function(x1,
     warning("Only produce the result based on the largest tau1 and largest tau2.")
   }
   
-  if (ntau2u == 1 && tau2u > 0) {
-    if (tau2u != 0)
+  if (ntau2u == 1 && length(tau2u) == 1) {
+    if (tau2u != 0) {
       l2u <-
-        c(0, exp(seq(log(tau2u / 1e3), log(tau2u), length = 10)))
-    else
+        c(0, exp(seq(
+          log(tau2u / 1e3), log(tau2u), length = 10
+        )))
+    } else {
       l2u <- tau2u
-  } else{
+    }
+  } else {
     l2u <- 1
   }
-  if (ntau2v == 1 && tau2v > 0) {
-    if (tau2v != 0)
+  if (ntau2v == 1 && length(tau2v) == 1) {
+    if (tau2v != 0) {
       l2v <-
-        c(0, exp(seq(log(tau2v / 1e3), log(tau2v), length = 10)))
-    else
+        c(0, exp(seq(
+          log(tau2v / 1e3), log(tau2v), length = 10
+        )))
+    } else{
       l2v <- tau2u
-  }
-  else{
+    }
+  } else {
     l2v <- 1
   }
-  if (doesSelectRank == TRUE) {
-    if (doesSelectAllTuningParameters == FALSE)
+  if (is_K_selected) {
+    if (are_all_tuning_parameters_selected == FALSE) {
       cvtempold <- spatmcacv_rcpp(x1,
                                   x2,
                                   Y1,
@@ -397,7 +404,7 @@ spatmca <- function(x1,
                                   thr,
                                   l2u,
                                   l2v)
-    else{
+    } else {
       warning("Computing time may be quite long")
       cvtempold <- spatmcacvall_rcpp(x1,
                                      x2,
@@ -416,7 +423,7 @@ spatmca <- function(x1,
                                      l2v)
     }
     for (k in 2:min(dim(Y1), dim(Y2))) {
-      if (doesSelectAllTuningParameters == FALSE)
+      if (are_all_tuning_parameters_selected == FALSE) {
         cvtemp <- spatmcacv_rcpp(x1,
                                  x2,
                                  Y1,
@@ -432,7 +439,7 @@ spatmca <- function(x1,
                                  thr,
                                  l2u,
                                  l2v)
-      else{
+      } else {
         warning("Computing time may be quite long")
         cvtemp <- spatmcacvall_rcpp(x1,
                                     x2,
@@ -452,14 +459,15 @@ spatmca <- function(x1,
       }
       
       if (min(cvtempold$cv2) <= min(cvtemp$cv2) ||
-          abs(min(cvtempold$cv2) - min(cvtemp$cv2)) <= 1e-8)
+          abs(min(cvtempold$cv2) - min(cvtemp$cv2)) <= 1e-8) {
         break
+      }
       cvtempold <- cvtemp
     }
     Khat <- k - 1
   }
-  else{
-    if (doesSelectAllTuningParameters == FALSE)
+  else {
+    if (are_all_tuning_parameters_selected == FALSE) {
       cvtempold <- spatmcacv_rcpp(x1,
                                   x2,
                                   Y1,
@@ -475,7 +483,7 @@ spatmca <- function(x1,
                                   thr,
                                   l2u,
                                   l2v)
-    else{
+    } else {
       warning("Computing time may be quite long")
       cvtempold <- spatmcacvall_rcpp(x1,
                                      x2,
@@ -509,7 +517,7 @@ spatmca <- function(x1,
     x1New <- x1
     Uestfn <- Uest
   }
-  else{
+  else {
     x1New <- as.matrix(x1New)
     Uestfn <- tpm2(x1New, x1, Uest)
   }
@@ -517,22 +525,16 @@ spatmca <- function(x1,
     x2New <- x2
     Vestfn <- Vest
   }
-  else{
+  else {
     x2New <- as.matrix(x2New)
     Vestfn <- tpm2(x2New, x2, Vest)
-  }
-  if (plot.cv == TRUE && !is.null(cv1)) {
-    originalPar <- par(no.readonly = TRUE)
-    on.exit(par(originalPar))
-    par(mfrow = c(2, 1))
-    image.plot(tau1u, tau1v, cv1, main = "for tau1u and tau1v selection given tau2u and tau2v")
-    image.plot(tau2u, tau2v, cv2, main = "for tau2u and tau2v selection given selected tau1u and tau2v")
   }
   Dest <- as.vector(cvtempold$Dest)
   crosscovfn <-
     Uestfn %*% diag(Dest, nrow = Khat, ncol = Khat) %*% t(Vestfn)
   obj.cv <-
     list(
+      call = call,
       Uestfn = Uestfn,
       Vestfn = Vestfn,
       crosscov = crosscovfn,
@@ -550,5 +552,60 @@ spatmca <- function(x1,
       tau1v = tau1v,
       tau2v = tau2v
     )
+  class(obj.cv) <- "spatmca"
   return(obj.cv)
+}
+
+
+#'
+#' @title  Display the cross-validation results
+#'
+#' @description Display the M-fold cross-validation results
+#'
+#' @param x An spatmca class object for `plot` method
+#' @param ... Not used directly
+#' @return `NULL`
+#' @seealso \link{spatmca}
+#'
+#' @export
+#' @method plot spatmca
+#' @examples
+#' p <- q <- 5
+#' n <- 50
+#' x1 <- matrix(seq(-7, 7, length = p), nrow = p, ncol = 1)
+#' x2 <- matrix(seq(-7, 7, length = q), nrow = q, ncol = 1)
+#' u <- exp(-x1^2) / norm(exp(-x1^2), "F")
+#' v <- exp(-(x2 - 2)^2) / norm(exp(-(x2 - 2)^2), "F")
+#' Sigma <- array(0, c(p + q, p + q))
+#' Sigma[1:p, 1:p] <- diag(p)
+#' Sigma[(p + 1):(p + q), (p + 1):(p + q)] <- diag(p)
+#' Sigma[1:p, (p + 1):(p + q)] <- u %*% t(v)
+#' Sigma[(p + 1):(p + q), 1:p] <- t(Sigma[1:p, (p + 1):(p + q)])
+#' noise <- MASS::mvrnorm(n, mu = rep(0, p + q), Sigma = 0.001 * diag(p + q))
+#' Y <- MASS::mvrnorm(n, mu = rep(0, p + q), Sigma = Sigma) + noise
+#' Y1 <- Y[, 1:p]
+#' Y2 <- Y[, -(1:p)]
+#' cv_1D <- spatmca(x1, x2, Y1, Y2, num_cores = 2)
+#' plot(cv_1D)
+#
+plot.spatmca <- function(x, ...) {
+  if (!inherits(x, "spatmca")) {
+    stop("Invalid object! Please enter a `spatmca` object")
+  }
+  originalPar <- par(no.readonly = TRUE)
+  cv_data <- result <- list()
+  variate_names <- c("First Variate", "Second Variate")
+  
+  cv_data[[variate_names[1]]] <-
+    expand.grid(u = x$tau1u, v = x$tau1v)
+  cv_data[[variate_names[1]]]$cv <- as.vector(x$cv1)
+  cv_data[[variate_names[2]]] <-
+    expand.grid(u = x$tau2u, v = x$tau2v)
+  cv_data[[variate_names[2]]]$cv <- as.vector(x$cv2)
+  
+  for (variate in variate_names) {
+    result[[variate]] <- plot_cv_field(cv_data[[variate]], variate)
+  }
+  plot_sequentially(result)
+  par(originalPar)
 }
